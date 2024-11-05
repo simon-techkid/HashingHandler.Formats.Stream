@@ -25,26 +25,21 @@ public class StreamHashProvider : IHashingProvider<System.IO.Stream>, IHashingPr
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
 
-        return ReadStream(data, false);
+        return ReadStream(data);
     }
 
     public Task<byte[]> ConvertToBytes(System.IO.Stream data, CancellationToken cancellationToken = default)
     {
         if (data == null) throw new ArgumentNullException(nameof(data));
 
-        return Task.Run(() => ReadStream(data, true), cancellationToken);
+        return Task.Run(() => ReadStreamAsync(data), cancellationToken);
     }
 
-    private byte[] ReadStream(System.IO.Stream data, bool isAsync)
+    private byte[] ReadStream(System.IO.Stream data)
     {
-        using var memoryStream = new MemoryStream();
+        using MemoryStream memoryStream = new();
         byte[] buffer = new byte[_bufferSize];
         int bytesRead;
-
-        if (isAsync)
-        {
-            return ReadStreamAsync(data, memoryStream, buffer).GetAwaiter().GetResult();
-        }
 
         while ((bytesRead = data.Read(buffer, 0, buffer.Length)) > 0)
         {
@@ -54,8 +49,10 @@ public class StreamHashProvider : IHashingProvider<System.IO.Stream>, IHashingPr
         return memoryStream.ToArray();
     }
 
-    private async Task<byte[]> ReadStreamAsync(System.IO.Stream data, MemoryStream memoryStream, byte[] buffer)
+    private async Task<byte[]> ReadStreamAsync(System.IO.Stream data)
     {
+        using MemoryStream memoryStream = new();
+        byte[] buffer = new byte[_bufferSize];
         int bytesRead;
 
         while ((bytesRead = await data.ReadAsync(buffer, 0, buffer.Length)) > 0)
